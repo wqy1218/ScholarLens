@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src http://127.0.0.1:* http://localhost:* blob:; font-src 'self' data: blob:" />
+  <title>ScholarLens</title>
+  <script src="theme-init.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="api-banner" class="api-banner hidden"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="lg-stroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#6c8cff" />
+        <stop offset="1" stop-color="#4cc3e8" />
+      </linearGradient>
+      <radialGradient id="lg-glass" cx="0.35" cy="0.3" r="0.9">
+        <stop offset="0" stop-color="rgba(108,140,255,0.30)" />
+        <stop offset="1" stop-color="rgba(108,140,255,0.04)" />
+      </radialGradient>
+      <radialGradient id="lg-glow" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="rgba(108,140,255,0.16)" />
+        <stop offset="0.6" stop-color="rgba(108,140,255,0.07)" />
+        <stop offset="1" stop-color="rgba(108,140,255,0)" />
+      </radialGradient>
+    </defs>
+  </svg>
+
+
+  <div id="boot" class="boot" role="status" aria-live="polite" aria-label="正在初始化 ScholarLens">
+    <div class="boot-inner">
+      <div class="boot-mark">
+        <svg class="lens-logo" viewBox="0 0 86 86" aria-label="loading">
+          <circle class="logo-glow" cx="42" cy="42" r="37" fill="url(#lg-glow)" />
+          <circle class="logo-arc arc-1" cx="42" cy="42" r="36" fill="none"
+                  stroke="rgba(108,140,255,0.34)" stroke-width="2.2"
+                  stroke-dasharray="44 182" stroke-linecap="round" />
+          <circle class="logo-arc arc-2" cx="42" cy="42" r="31.5" fill="none"
+                  stroke="rgba(76,195,232,0.28)" stroke-width="1.6"
+                  stroke-dasharray="26 172" stroke-linecap="round" />
+          <circle cx="42" cy="42" r="27" fill="url(#lg-glass)"
+                  stroke="url(#lg-stroke)" stroke-width="4" />
+          <circle cx="33.5" cy="32.5" r="12" fill="rgba(255,255,255,0.08)" />
+          <rect x="63" y="63" width="27" height="7" rx="3.5"
+                transform="rotate(45 63 63)" fill="url(#lg-stroke)" />
+          <g class="orbit-dot od-1"><circle cx="42" cy="11" r="5.2" fill="#5fb9e8" /></g>
+          <g class="orbit-dot od-2"><circle cx="42" cy="17" r="4.0" fill="#7ea4ff" /></g>
+          <g class="orbit-dot od-3"><circle cx="42" cy="23" r="3.0" fill="#c9d6ff" /></g>
+        </svg>
+      </div>
+      <div class="boot-word">ScholarLens</div>
+      <div class="boot-tagline">领域透镜 · 本地阅读工作台</div>
+      <ol class="boot-steps" id="boot-steps">
+        <li data-step="engine"><i></i><span>本地引擎</span></li>
+        <li data-step="domains"><i></i><span>研究领域</span></li>
+        <li data-step="overview"><i></i><span>工作台概览</span></li>
+        <li data-step="history"><i></i><span>问答历史</span></li>
+      </ol>
+      <div class="boot-stage-row">
+        <div class="boot-stage" id="boot-stage">正在唤醒本地引擎…</div>
+        <span class="boot-pct" id="boot-pct">0%</span>
+      </div>
+      <div class="boot-progress" aria-hidden="true"><i id="boot-bar"></i></div>
+      <button id="boot-retry" class="btn btn-mini hidden" type="button">重新初始化</button>
+    </div>
+  </div>
+  <div id="app">
+    <aside id="left-panel">
+      <div class="drag-strip" id="left-drag" title="拖拽调宽"></div>
+      <div class="panel-header">
+        <div class="logo">ScholarLens</div>
+        <button id="btn-new-domain" class="btn btn-primary" title="快速创建领域（自动命名）">+ 领域</button>
+      </div>
+      <div id="domain-list" class="domain-list"></div>
+      <div class="panel-footer">
+        <button id="btn-import" class="btn btn-ghost">导入论文</button>
+        <button id="btn-discover" class="btn btn-ghost" title="按向量聚类提出领域划分，可预览后应用">领域发现</button>
+      </div>
+    </aside>
+
+    <main id="reader">
+      <div id="reader-tabs" class="reader-tabs hidden"></div>
+      <div id="reader-toolbar" class="reader-toolbar">
+        <span id="paper-title" class="paper-title">未打开论文</span>
+        <span class="toolbar-spacer"></span>
+        <span id="pager" class="pager hidden">
+          <button id="btn-prev-page" class="btn btn-mini" title="上一页（PgUp）">◀</button>
+          <span id="page-indicator">1 / 1</span>
+          <button id="btn-next-page" class="btn btn-mini" title="下一页（PgDn）">▶</button>
+          <span class="sel-sep"></span>
+          <button id="btn-zoom-out" class="btn btn-mini" title="缩小">−</button>
+          <span id="zoom-indicator">140%</span>
+          <button id="btn-zoom-in" class="btn btn-mini" title="放大">＋</button>
+        </span>
+        <button id="btn-skim" class="btn btn-mini hidden" title="按研究目标推荐阅读路径">跳读</button>
+        <button id="btn-outline" class="btn btn-mini hidden" title="章节大纲、图表、算法与表格">结构</button>
+        <button id="btn-card" class="btn btn-mini hidden" title="查看 / 编辑 / 下载阅读卡片">卡片</button>
+        <button id="btn-export-paper" class="btn btn-mini hidden" title="导出本文 Markdown">导出</button>
+      </div>
+      <div id="reader-body" class="reader-body">
+        <div id="pdf-container" class="pdf-container hidden"></div>
+        <div id="reader-placeholder" class="placeholder">
+        <div class="home">
+          <div class="home-head">
+            <svg class="lens-logo small" viewBox="0 0 86 86" aria-label="ScholarLens">
+              <circle class="logo-glow" cx="42" cy="42" r="37" fill="url(#lg-glow)" />
+              <circle class="logo-arc arc-1" cx="42" cy="42" r="36" fill="none"
+                      stroke="rgba(108,140,255,0.34)" stroke-width="2.2"
+                      stroke-dasharray="44 182" stroke-linecap="round" />
+              <circle class="logo-arc arc-2" cx="42" cy="42" r="31.5" fill="none"
+                      stroke="rgba(76,195,232,0.28)" stroke-width="1.6"
+                      stroke-dasharray="26 172" stroke-linecap="round" />
+              <circle cx="42" cy="42" r="27" fill="url(#lg-glass)"
+                      stroke="url(#lg-stroke)" stroke-width="4" />
+              <circle cx="33.5" cy="32.5" r="12" fill="rgba(255,255,255,0.08)" />
+              <rect x="63" y="63" width="27" height="7" rx="3.5"
+                    transform="rotate(45 63 63)" fill="url(#lg-stroke)" />
+              <g class="orbit-dot od-1"><circle cx="42" cy="11" r="5.2" fill="#5fb9e8" /></g>
+              <g class="orbit-dot od-2"><circle cx="42" cy="17" r="4.0" fill="#7ea4ff" /></g>
+              <g class="orbit-dot od-3"><circle cx="42" cy="23" r="3.0" fill="#c9d6ff" /></g>
+            </svg>
+            <div>
+              <div class="placeholder-text">ScholarLens 阅读工作台</div>
+            </div>
+          </div>
+          <div class="home-stats" id="home-stats"></div>
+          <div class="home-section">
+            <div class="home-section-title">最近打开</div>
+            <div id="home-recent" class="home-recent"></div>
+          </div>
+        </div>
+      </div>
+      <div id="reader-progress" class="reader-progress hidden">
+        <svg class="lens-logo small" viewBox="0 0 86 86" aria-label="loading">
+          <circle class="logo-glow" cx="42" cy="42" r="37" fill="url(#lg-glow)" />
+          <circle class="logo-arc arc-1" cx="42" cy="42" r="36" fill="none"
+                  stroke="rgba(108,140,255,0.34)" stroke-width="2.2"
+                  stroke-dasharray="44 182" stroke-linecap="round" />
+          <circle class="logo-arc arc-2" cx="42" cy="42" r="31.5" fill="none"
+                  stroke="rgba(76,195,232,0.28)" stroke-width="1.6"
+                  stroke-dasharray="26 172" stroke-linecap="round" />
+          <circle cx="42" cy="42" r="27" fill="url(#lg-glass)"
+                  stroke="url(#lg-stroke)" stroke-width="4" />
+          <circle cx="33.5" cy="32.5" r="12" fill="rgba(255,255,255,0.08)" />
+          <rect x="63" y="63" width="27" height="7" rx="3.5"
+                transform="rotate(45 63 63)" fill="url(#lg-stroke)" />
+          <g class="orbit-dot od-1"><circle cx="42" cy="11" r="5.2" fill="#5fb9e8" /></g>
+          <g class="orbit-dot od-2"><circle cx="42" cy="17" r="4.0" fill="#7ea4ff" /></g>
+          <g class="orbit-dot od-3"><circle cx="42" cy="23" r="3.0" fill="#c9d6ff" /></g>
+        </svg>
+        <div id="reader-progress-stage" class="progress-stage">准备中…</div>
+        <div class="progress-track"><div id="reader-progress-bar"></div></div>
+        <div id="reader-progress-pct" class="progress-pct">0%</div>
+        <div id="reader-progress-batch" class="progress-batch"></div>
+        <button id="reader-progress-cancel" class="btn btn-mini btn-danger" style="margin-top:14px">取消解析</button>
+      </div>
+      <div id="reader-error" class="reader-error hidden">
+        <div id="reader-error-title" class="reader-error-title">论文解析失败</div>
+        <div id="reader-error-msg" class="reader-error-msg"></div>
+        <button id="reader-error-retry" class="btn btn-mini btn-primary">重试</button>
+      </div>
+      </div>
+      <div id="sel-menu" class="sel-menu hidden">
+        <button class="btn btn-mini hl-btn" data-cat="background">背景</button>
+        <button class="btn btn-mini hl-btn" data-cat="approach">解决思路</button>
+        <button class="btn btn-mini hl-btn" data-cat="limitation">局限</button>
+        <span class="sel-sep"></span>
+        <button class="btn btn-mini" data-cat="__copy">复制</button>
+        <button class="btn btn-mini" data-cat="__translate">翻译</button>
+        <button class="btn btn-mini" data-cat="__explain">解释</button>
+        <button class="btn btn-mini" data-cat="__note">批注</button>
+      </div>
+
+
+      <div id="float-card" class="float-card hidden">
+        <div class="fc-head">
+          <span id="fc-title" class="fc-title">翻译</span>
+          <span class="toolbar-spacer"></span>
+          <span id="fc-cache" class="sum-warn"></span>
+          <button id="fc-stop" class="btn btn-mini btn-danger hidden" title="终止本次翻译">停止</button>
+          <button id="fc-align" class="btn btn-mini" title="对照模式：原文/译文逐句对齐">对照</button>
+          <button id="fc-close" class="btn btn-mini" title="关闭（Esc）">×</button>
+        </div>
+        <div id="fc-mode-tabs" class="fc-tabs hidden">
+          <button class="btn btn-mini fc-mode" data-mode="literal">直译</button>
+          <button class="btn btn-mini fc-mode" data-mode="free">意译</button>
+          <button class="btn btn-mini fc-mode" data-mode="academic">学术优化</button>
+        </div>
+        <div id="fc-body" class="fc-body"></div>
+      </div>
+    </main>
+
+    <aside id="right-panel">
+      <div class="drag-strip drag-west" id="right-drag" title="拖拽调宽"></div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="summary">摘要</button>
+        <button class="tab" data-tab="highlights">高亮</button>
+        <button class="tab" data-tab="qa">问答</button>
+        <button class="tab" data-tab="notes">笔记</button>
+      </nav>
+      <div class="tab-body" id="tab-summary"><div class="empty-hint">打开论文后显示五段式摘要</div></div>
+      <div class="tab-body hidden" id="tab-highlights"><div class="empty-hint">三类高亮：背景蓝 / 解决思路绿 / 局限红<br /><span class="sub">划选自建，或点「自动识别」让模型标注</span></div></div>
+      <div class="tab-body hidden" id="tab-qa">
+        <div class="qa-session-bar">
+          <select id="qa-session-select" title="问答会话"></select>
+          <button id="qa-session-new" class="btn btn-mini" title="新建会话（可选跨论文比较）">＋</button>
+          <button id="qa-session-del" class="btn btn-mini btn-danger" title="删除当前会话">删</button>
+        </div>
+        <div id="qa-binding" class="qa-binding"></div>
+        <div id="qa-scope-row" class="qa-scope-row hidden">
+          <button id="qa-scope" class="qa-chip" title="问答范围（自动推断，可一键修正）"></button>
+          <div id="qa-scope-menu" class="qa-scope-menu hidden"></div>
+        </div>
+        <div id="qa-messages" class="qa-messages"><div class="empty-hint">基于当前论文的多轮问答<br /><span class="sub">结论自动附引用编号，可点击跳原文</span></div></div>
+        <div id="qa-suggest" class="qa-suggest"></div>
+        <div class="qa-input-row">
+          <div class="qa-toggles">
+            <button id="qa-think" class="btn btn-mini qa-chip" title="该轮启用深度思考（更慢更深）">🧠 思考</button>
+            <button id="qa-img" class="btn btn-mini qa-chip" title="附加图片提问（视觉模型）">📷 图片</button>
+            <input id="qa-img-file" type="file" accept="image/*" class="hidden" />
+          </div>
+          <input id="qa-input" placeholder="针对本论文提问…（Enter 发送）" />
+          <button id="qa-stop" class="btn btn-mini btn-danger hidden" title="停止生成">停止</button>
+          <button id="qa-send" class="btn btn-primary btn-mini">发送</button>
+        </div>
+      </div>
+      <div class="tab-body hidden" id="tab-notes"><div class="empty-hint">划线笔记与自由批注</div></div>
+    </aside>
+  </div>
+
+
+  <div id="modal-mask" class="modal-mask hidden">
+    <div class="modal">
+      <div class="modal-title">导入论文</div>
+      <label class="modal-label">arXiv 链接 / ID（每行一个，支持批量）</label>
+      <textarea id="input-arxiv" rows="5" placeholder="1706.03762&#10;https://arxiv.org/abs/1810.04805"></textarea>
+      <label class="modal-label">本地 PDF（每行一个，或点击浏览选择）</label>
+      <textarea id="input-local" rows="3" placeholder="点击下方按钮选择 PDF 文件"></textarea>
+      <button id="btn-browse" class="btn">浏览本地 PDF…</button>
+      <label class="modal-label">归属方式</label>
+      <select id="import-domain-select" style="width:100%"></select>
+      <div class="modal-label" style="margin-top:12px">批量下载 — 关键词搜 arXiv 并导入；留空关键词且选了领域 = 按领域术语表扩充</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="batch-query" placeholder="如：attention mechanism / 留空用领域术语" style="flex:1" />
+        <select id="batch-count"><option>3</option><option selected>5</option><option>8</option><option>10</option></select>
+        <button id="btn-batch-import" class="btn">搜索并导入</button>
+      </div>
+      <div id="batch-result" class="modal-error hidden"></div>
+      <div id="modal-error" class="modal-error hidden"></div>
+      <div class="modal-actions">
+        <button id="btn-cancel-import" class="btn">取消</button>
+        <button id="btn-submit-import" class="btn btn-primary">导入</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="settings-mask" class="modal-mask hidden">
+    <div class="modal modal-wide">
+      <div class="modal-title">设置</div>
+      <div class="settings-tabs">
+        <button class="set-tab active" data-set="api">API</button>
+        <button class="set-tab" data-set="prompt">提示词</button>
+        <button class="set-tab" data-set="param">token 管理</button>
+      </div>
+
+      <div class="settings-page" data-page="api">
+        <div class="settings-cols">
+          <div class="settings-col profile-col">
+            <div class="settings-heading">厂商档案</div>
+            <div id="profile-list" class="profile-list"></div>
+            <div class="profile-ops">
+              <button id="btn-profile-add" class="btn btn-mini">新增档案</button>
+              <button id="btn-profile-del" class="btn btn-mini btn-danger">删除当前</button>
+            </div>
+          </div>
+          <div class="settings-col">
+            <div class="settings-heading">编辑档案</div>
+            <label class="modal-label">档案名称</label>
+            <input id="pf-name" type="text" />
+            <label class="modal-label">API Base</label>
+            <input id="pf-api-base" type="text" />
+            <label class="modal-label">API Key（留空则沿用已保存的 Key；根目录 APIKEY.txt 仍可兜底）</label>
+            <input id="pf-api-key" type="password" placeholder="sk-…" />
+            <button id="pf-clear-key" class="btn btn-mini" style="margin-top:4px">清除已保存的 Key</button>
+            <label class="modal-label">快速模型（摘要 / 高亮 / 翻译）</label>
+            <input id="pf-model-fast" type="text" />
+            <label class="modal-label">深度模型（问答）</label>
+            <input id="pf-model-pro" type="text" />
+            <label class="modal-label">思考模式</label>
+            <select id="pf-thinking">
+              <option value="disabled">disabled（推荐）</option>
+              <option value="enabled">enabled（消耗大量 token）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-page hidden" data-page="prompt">
+        <div class="settings-col">
+          <div class="settings-heading">系统提示词（修改后即时生效；「输出格式」段与解析代码是契约，勿破坏）</div>
+          <label class="modal-label">摘要提示词 prompt_summary（JSON 数组 + evidence 逐字）</label>
+          <textarea id="cfg-prompt-summary" rows="8"></textarea>
+          <label class="modal-label">问答提示词 prompt_qa（引用 [n] 与拒答规则）</label>
+          <textarea id="cfg-prompt-qa" rows="6"></textarea>
+          <label class="modal-label">自动高亮提示词 prompt_highlight（quote 逐字 + 完整句）</label>
+          <textarea id="cfg-prompt-highlight" rows="6"></textarea>
+          <label class="modal-label">翻译提示词 prompt_translate（术语表前置吃 prompt cache，编号句子 JSON 输出）</label>
+          <textarea id="cfg-prompt-translate" rows="7"></textarea>
+          <label class="modal-label">解释提示词 prompt_explain（JSON plain/concepts/why）</label>
+          <textarea id="cfg-prompt-explain" rows="5"></textarea>
+        </div>
+      </div>
+
+      <div class="settings-page hidden" data-page="param">
+        <div class="settings-cols">
+          <div class="settings-col">
+            <div class="settings-heading">token 预算</div>
+            <label class="modal-label">默认 max_tokens</label>
+            <input id="cfg-max-tokens" type="number" step="128" min="256" />
+            <label class="modal-label">单次输出上限（当前 100000）</label>
+            <input id="cfg-max-limit" type="number" step="1000" min="256" />
+          </div>
+          <div class="settings-col">
+            <div class="settings-heading">检索与归属阈值</div>
+            <label class="modal-label">归属阈值 assign_threshold（0-1）</label>
+            <input id="cfg-assign-th" type="number" step="0.01" min="0" max="1" />
+            <label class="modal-label">弱关联阈值 link_threshold（0-1）</label>
+            <input id="cfg-link-th" type="number" step="0.01" min="0" max="1" />
+            <label class="modal-label">宽领域扣罚 domain_dispersion_weight（0-1）</label>
+            <input id="cfg-dispersion" type="number" step="0.01" min="0" max="1" />
+            <div class="modal-label">阈值工具（自动调整按当前论文同域相似度分布估计）</div>
+            <div class="profile-ops">
+              <button id="btn-th-auto" class="btn btn-mini btn-primary">自动调整</button>
+              <button id="btn-th-reset" class="btn btn-mini">恢复默认 0.5/0.35</button>
+              <button id="btn-th-reassign" class="btn btn-mini">全部重新归属</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings-error" class="modal-error hidden"></div>
+      <div class="modal-actions">
+        <button id="btn-cancel-settings" class="btn">取消</button>
+        <button id="btn-save-settings" class="btn btn-primary">保存全部</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="palette-mask" class="modal-mask hidden">
+    <div class="palette">
+      <input id="palette-input" placeholder="搜索论文 / 输入命令…（Ctrl+K 开关）" autocomplete="off" />
+      <div id="palette-results" class="palette-results"></div>
+    </div>
+  </div>
+
+
+  <div id="dqa-mask" class="modal-mask hidden">
+    <div class="knowledge-panel" style="height: 78vh">
+      <div class="knowledge-head">
+        <div>
+          <div id="dqa-title" class="knowledge-title">领域问答</div>
+          <div class="knowledge-stats" style="display:flex; gap:6px; align-items:center">
+            <select id="dqa-session-select" style="max-width:220px"></select>
+            <button id="dqa-session-new" class="btn btn-mini">＋</button>
+          </div>
+        </div>
+        <button id="dqa-close" class="btn" title="关闭（Esc）">关闭</button>
+      </div>
+      <div id="dqa-scope" class="dqa-scope"></div>
+      <div id="dqa-messages" class="qa-messages" style="flex:1"></div>
+      <div id="dqa-papers" class="dqa-papers"></div>
+      <div class="qa-input-row">
+        <div class="qa-toggles">
+          <button id="dqa-think" class="btn btn-mini qa-chip">🧠 思考</button>
+          <button id="dqa-img" class="btn btn-mini qa-chip">📷 图片</button>
+          <input id="dqa-img-file" type="file" accept="image/*" class="hidden" />
+        </div>
+        <input id="dqa-input" placeholder="跨论文提问…（领域内所有论文作为材料）" />
+        <button id="dqa-send" class="btn btn-primary btn-mini">发送</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="audit-mask" class="modal-mask hidden">
+    <div class="knowledge-panel" style="height: 74vh">
+      <div class="knowledge-head">
+        <div class="knowledge-title">质量审计 · 面试数字页</div>
+        <button id="audit-close" class="btn">关闭</button>
+      </div>
+      <div class="knowledge-body" id="audit-body"></div>
+    </div>
+  </div>
+
+
+  <div id="tool-mask" class="modal-mask hidden">
+    <div class="modal modal-wide">
+      <div class="modal-title" id="tool-title">工具</div>
+      <div id="tool-body" class="tool-body"></div>
+      <div class="modal-actions"><button id="tool-close" class="btn">关闭</button></div>
+    </div>
+  </div>
+
+  <footer id="status-bar">
+    <span id="status-backend" class="status-item"><span class="dot dot-off"></span>后端检测中…</span>
+    <span id="status-port" class="status-item">—</span>
+    <span id="status-queue" class="status-item"></span>
+    <span class="status-item grow"></span>
+    <button id="btn-audit" class="btn btn-mini" title="质量审计：面试数字页">审计</button>
+    <button id="btn-layout" class="btn btn-mini" title="恢复初始布局（侧栏宽度）">布局</button>
+    <button id="btn-theme" class="btn btn-mini" title="明暗主题切换">🌙</button>
+    <button id="btn-settings" class="btn btn-mini">设置</button>
+    <span class="status-item" id="status-version">ScholarLens</span>
+  </footer>
+
+  <div id="toast" class="toast hidden"><span id="toast-text"></span><button id="btn-toast-undo" class="btn btn-mini">撤销</button></div>
+
+
+  <div id="knowledge-mask" class="modal-mask hidden">
+    <div class="knowledge-panel">
+      <div class="knowledge-head">
+        <div>
+          <div id="kn-title" class="knowledge-title">领域知识</div>
+          <div id="kn-stats" class="knowledge-stats"></div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center">
+          <button id="kn-view-list" class="btn btn-mini active">列表</button>
+          <button id="kn-view-graph" class="btn btn-mini" title="领域关联图：主领域实线 / 弱关联虚线">图谱</button>
+          <button id="kn-tools" class="btn btn-mini" title="报告 / 综述 / 快照 / 日志 / 概念 / 建议 / 索引">工具</button>
+          <button id="kn-close" class="btn" title="关闭（Esc）">关闭</button>
+        </div>
+      </div>
+      <div class="knowledge-body" id="kn-body"></div>
+      <div class="knowledge-body hidden" id="kn-graph"></div>
+    </div>
+  </div>
+
+  <script src="vendor/pdf.min.js"></script>
+  <script src="figure-geom.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

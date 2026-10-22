@@ -1,0 +1,33 @@
+appId: cn.scholarlens.app
+productName: ScholarLens
+directories:
+  output: dist
+# electron 主进程代码进 asar；后端/运行时/模型走 extraResources（不压缩，保持 python-runtime 布局）
+files:
+  - app/main.js
+  - app/preload.js
+  - package.json
+  - LICENSE
+asar: true
+extraResources:
+  - { from: server, to: server }
+  - { from: app/renderer, to: app/renderer }
+  - { from: python-runtime, to: python-runtime }
+  - { from: assets, to: assets }
+  - { from: models/hf, to: models/hf }
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.ico
+nsis:
+  oneClick: false           # 向导式安装：可选择安装目录
+  perMachine: false         # 按用户安装（默认 %LOCALAPPDATA%\Programs），数据目录可写
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ScholarLens
+  runAfterFinish: true
+  license: LICENSE
+  artifactName: ScholarLens-Setup-${version}.${ext}

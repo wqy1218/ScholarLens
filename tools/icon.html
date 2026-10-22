@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; width: 256px; height: 256px; overflow: hidden; }
+  svg { display: block; width: 256px; height: 256px; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="ScholarLens">
+  <defs>
+    <linearGradient id="lg-stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6c8cff" />
+      <stop offset="1" stop-color="#4cc3e8" />
+    </linearGradient>
+    <radialGradient id="lg-glass" cx="0.35" cy="0.3" r="0.9">
+      <stop offset="0" stop-color="rgba(108,140,255,0.30)" />
+      <stop offset="1" stop-color="rgba(108,140,255,0.04)" />
+    </radialGradient>
+  </defs>
+  <g transform="translate(50 50) scale(1.18) translate(-47.5 -49.5)">
+    <circle cx="42" cy="42" r="27" fill="url(#lg-glass)"
+            stroke="url(#lg-stroke)" stroke-width="4" />
+    <circle cx="33.5" cy="32.5" r="12" fill="rgba(255,255,255,0.08)" />
+    <rect x="63" y="63" width="27" height="7" rx="3.5"
+          transform="rotate(45 63 63)" fill="url(#lg-stroke)" />
+  </g>
+</svg>
+</body>
+</html>

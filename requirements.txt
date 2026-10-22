@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn>=0.30
+pymupdf>=1.24
+pillow>=10.0
+requests>=2.31
+sentence-transformers>=3.0
+numpy>=1.26
+# v1.0.4 (P2-5): fastapi.testclient (used by scripts/test_api.py and the smoke
+# scripts) imports httpx, which starlette does NOT pull in by default.
+httpx>=0.27

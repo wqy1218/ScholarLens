@@ -1,0 +1,13 @@
+node_modules/
+__pycache__/
+.venv/
+python-runtime/
+# 运行期数据整目录忽略（含 electron-profile / indexes / backend.lock / 各类缓存）
+data/
+APIKEY.txt
+models/
+dist/
+*.exe
+debug.log
+release/
+sl_*/
