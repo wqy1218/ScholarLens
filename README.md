@@ -81,35 +81,6 @@ npm start                        # 或双击 start.cmd
 2. `models/hf/` — 需要 `BAAI/bge-small-en-v1.5`；默认 `HF_HUB_OFFLINE=1` 只读本地缓存，
    首次可临时去掉该变量联网拉取。
 
-## 构建交付包
-
-```cmd
-md %USERPROFILE%\_slbuild
-set TMP=%USERPROFILE%\_slbuild&& set TEMP=%USERPROFILE%\_slbuild
-npx electron-builder --win nsis --publish never
-# 产物：dist/ScholarLens-Setup-<version>.exe —— 向导式安装包，可选安装目录
-```
-
-`TMP` 须指向新建的空目录：`TMP` 指向 `%LOCALAPPDATA%\Temp` 时，NSIS 生成卸载器一步返回退出码 2，构建中断。
-
-构建前清空 `python-runtime` 与 `server` 下的 `__pycache__`。
-
-其他目标：
-
-```bash
-npx electron-builder --win portable --publish never   # dist/ScholarLens-<version>.exe，单文件免安装
-npx electron-builder --win --dir --publish never      # dist/win-unpacked/，免安装目录形态
-```
-
-网络不通时加 `--config.electronDist=node_modules/electron/dist` 复用本机 Electron。
-
-`electron-builder.yml` 用 `extraResources` 把 `server/`、`app/renderer/`、`python-runtime/`、
-`assets/`、`models/hf/` 原样落到 `resources/`（不压缩，保持 Python 运行时布局）；
-只有 Electron 主进程代码进 asar。NSIS 要求 `assets/icon.ico` 含 256px 帧。
-
-图标几何母版：`assets/mark.svg` 与 `tools/icon.html`；界面动效 logo 用 `viewBox="0 0 86 86"`。
-`scripts/make_icons.py` 重新生成 16–256 px 图标并覆盖 `assets/` 下的文件。
-
 ## 后端接口
 
 共 120 条路由，全部在 `server/api.py`：
@@ -175,11 +146,6 @@ python scripts/audit.py                       # 问答引用编号抽样
 - 源码运行：仓库的 `data\`。
 
 数据库、PDF、缓存全在该目录下，备份与换机复制它即可；`data/` 与 `APIKEY.txt` 都在 `.gitignore` 内。
-
-## 文档
-
-- [docs/使用说明.md](docs/使用说明.md) — 安装、配置、日常操作、备份与 FAQ
-- [docs/原理与流程.md](docs/原理与流程.md) — 架构、数据模型、导入/检索/阅读流程
 
 ## 许可
 
